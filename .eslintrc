@@ -1,0 +1,57 @@
+{
+    "extends": [
+        "airbnb-base",
+        "plugin:@typescript-eslint/recommended",
+        "prettier"
+    ],
+    "parser": "@typescript-eslint/parser",
+    "plugins": ["@typescript-eslint", "import"],
+    "settings": {
+        "import/parsers": {
+            "@typescript-eslint/parser": [".ts", ".tsx"]
+        },
+        "import/resolver": {
+            "typescript": {
+                "alwaysTryTypes": true
+            }
+        }
+    },
+    "overrides": [
+        {
+            "files": [
+                "src/**/*.js",
+                "src/**/*.ts"
+            ],
+            "rules": {
+                "indent": ["error", 4, {
+                    "SwitchCase": 1
+                }],
+                "max-len": ["error", 120],
+                "no-plusplus": ["off"],
+                "operator-linebreak": ["error", "after", {
+                    "overrides": {
+                        "?": "before",
+                        ":": "before"
+                    }
+                }],
+                "object-curly-newline": ["error", {
+                    "multiline": true,
+                    "consistent": true 
+                }],
+                "no-mixed-operators": ["off"],
+                "linebreak-style": ["off"],
+                "lines-between-class-members": ["off"],
+                "no-shadow": ["off"],
+                "@typescript-eslint/no-shadow": ["error"],
+                "import/extensions": ["error", "always", {
+                    "js": "never",
+                    "ts": "never",
+                    "tsx": "never"
+                }],
+                "implicit-arrow-linebreak": "off",
+                "@typescript-eslint/member-delimiter-style": "error",
+                "import/no-cycle": "off"
+            }
+        }
+    ]
+}

@@ -1,0 +1,24 @@
+{
+    "extends": "@tsconfig/node18/tsconfig.json",
+    "compilerOptions": {
+        "allowJs": false,
+        "declaration": true,
+        "allowSyntheticDefaultImports": true,
+        "noFallthroughCasesInSwitch": true,
+        "moduleResolution": "Node16",
+        "resolveJsonModule": true,
+        "isolatedModules": true,
+        "outDir": "build",
+        "baseUrl": ".",
+        "declarationMap": true,
+    },
+    "include": [
+        "src/**/*.ts",
+        "src/**/*.d.ts",
+        "src/main.ts"
+    ],
+    "exclude": [
+        "src/__tests__/**/*",
+        "src/coverage/**/*"
+    ]
+}
