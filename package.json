@@ -2,21 +2,25 @@
     "name": "@ssrando/logic-parser",
     "version": "1.0.0",
     "description": "Standalone graph logic parser for Skyward Sword Randomizer",
+    "type": "module",
     "directories": {
         "test": "test"
     },
     "scripts": {
-        "run": "ts-node src/index.ts",
+        "run": "ts-node --esm src/index.ts",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "author": "CJ Schaefer (cjs8487)",
     "license": "GPL-3.0-or-later",
     "dependencies": {
-        "js-yaml": "^4.1.0"
+        "js-yaml": "^4.1.0",
+        "lodash": "^4.17.21",
+        "node-fetch": "^3.3.2"
     },
     "devDependencies": {
         "@tsconfig/node18": "^18.2.0",
         "@types/js-yaml": "^4.0.5",
+        "@types/lodash": "^4.14.202",
         "@types/node": "^20.5.0",
         "@typescript-eslint/eslint-plugin": "^6.3.0",
         "@typescript-eslint/parser": "^6.3.0",
