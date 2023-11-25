@@ -1,10 +1,42 @@
+import _ from 'lodash';
 import { splitFirstPathSegment } from './Util.js';
+
+type Area = {
+    abstract: boolean;
+    name: string;
+    entrances: Record<string, unknown>;
+    exits: Record<string, unknown>;
+    hint_region: string;
+    locations: Record<string, string>;
+    sub_areas: Record<string, Area>;
+};
+
+type Entrance = {
+    allowed_time_of_day: unknown;
+    short_name: string;
+};
+
+type Exit = {
+    vanilla: string;
+    short_name: string;
+};
+
+type DumpFile = {
+    areas: Area;
+    items: string[];
+    entrances: Record<string, Entrance>;
+    exits: Record<string, Exit>;
+    gossip_stones: Record<string, string>;
+    checks: Record<string, string>;
+};
 
 type MacroValue = string | Map<string, MacroValue>;
 type LocValue = string | Map<string, LocValue>;
 
 export const topMacros = new Map<string, MacroValue>();
 export const topLocations = new Map<string, LocValue>();
+let entrances: Record<string, Entrance> = {};
+let exits: Record<string, Exit> = {};
 
 const updateValueRecursive = (
     path: string,
@@ -46,6 +78,23 @@ export const updateMacro = (path: string, requirements: string) => {
 
 export const updateLocation = (path: string, requirements: string) => {
     updateValueRecursive(path, requirements, topLocations);
+};
+
+export const findConnectingEntrance = (exitPath: string) => {
+    const exit = exits[exitPath];
+    console.log(exitPath);
+    console.log(exit);
+    if (!exit) return undefined;
+    const entranceShort = exit.vanilla;
+    return _.findKey(
+        entrances,
+        (entrance) => entrance.short_name === entranceShort,
+    );
+};
+
+export const copyDumpData = (dump: DumpFile) => {
+    exits = dump.exits;
+    entrances = dump.entrances;
 };
 
 export default {};

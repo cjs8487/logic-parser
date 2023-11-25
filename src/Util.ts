@@ -8,4 +8,8 @@ export const splitFirstPathSegment = (path: string) => {
     return [first, remaining];
 };
 
-export default {};
+export const rsplit = (str: string, delim: string, count: number) => {
+    const parts = str.split(delim);
+    const splits = parts.splice(parts.length - count);
+    return [parts.join(delim), ...splits];
+};
