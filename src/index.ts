@@ -1,6 +1,13 @@
 import _ from 'lodash';
 import { load } from 'js-yaml';
 import fetch from 'node-fetch';
+import {
+    topLocations,
+    topMacros,
+    updateLocation,
+    updateMacro,
+} from './LogicData.js';
+import { splitFirstPathSegment } from './Util.js';
 
 const loadFileFromUrl = async (url: string) => {
     const response = await fetch(url);
@@ -35,81 +42,46 @@ type DumpFile = {
     checks: Record<string, string>;
 };
 
-type MacroValue = string | Map<string, MacroValue>;
-type LocValue = string | Map<string, LocValue>;
-
-const collectLocations = (
-    area: Area,
-    checks: string[],
-    topMacros: Map<string, MacroValue>,
-    topLocations: Map<string, LocValue>,
-    localMacros: Map<string, MacroValue>,
-    localLocations: Map<string, LocValue>,
-) => {
-    if (!area.abstract) {
-        _.forEach(area.locations, (reqs, location) => {
-            if (checks.includes(`${area.name}\\${location}`)) {
-                if (localLocations.has(location)) {
-                    localLocations.set(
-                        location,
-                        `${localLocations.get(location)} | ${reqs}`,
-                    );
-                } else {
-                    localLocations.set(location, reqs);
-                }
-            } else if (localMacros.has(location)) {
-                localMacros.set(
-                    location,
-                    `${localMacros.get(location)} | ${reqs}`,
-                );
+const collectLocations = (area: Area, checks: string[]) => {
+    if (area.abstract) {
+        _.forEach(area.locations, (reqs, macro) => {
+            if (macro.includes('\\')) {
+                updateMacro(splitFirstPathSegment(macro)[1], reqs);
             } else {
-                localMacros.set(location, reqs);
+                updateMacro(
+                    `${splitFirstPathSegment(area.name)[1]}\\${macro}`,
+                    reqs,
+                );
             }
         });
     } else {
-        _.forEach(area.locations, (reqs, macro) => {
-            if (localMacros.has(macro)) {
-                localMacros.set(macro, `${localMacros.get(macro)} | ${reqs}`);
+        _.forEach(area.locations, (reqs, location) => {
+            if (location.includes('\\')) {
+                updateMacro(splitFirstPathSegment(location)[1], reqs);
             } else {
-                localMacros.set(macro, reqs);
+                updateLocation(
+                    `${splitFirstPathSegment(area.name)[1]}\\${location}`,
+                    reqs,
+                );
             }
         });
     }
-    _.forEach(area.sub_areas, (subarea, localName) => {
-        const childMacros = new Map<string, MacroValue>();
-        const childLocations = new Map<string, LocValue>();
-        localMacros.set(localName, childMacros);
-        localLocations.set(localName, childLocations);
-
-        collectLocations(
-            subarea,
-            checks,
-            topMacros,
-            topLocations,
-            childMacros,
-            childLocations,
-        );
+    _.forEach(area.sub_areas, (subarea) => {
+        collectLocations(subarea, checks);
     });
 };
 
 const loadLogicDump = async () => {
     const dump = (await loadFile('dump')) as DumpFile;
     // console.log(dump.areas);
-    console.log(dump.areas.sub_areas['Ancient Cistern']);
+    // console.log(dump.areas.sub_areas['Ancient Cistern']);
     // console.log(_.keys(dump.checks));
-    const macros: Map<string, MacroValue> = new Map();
-    const locations: Map<string, LocValue> = new Map();
-    collectLocations(
-        dump.areas.sub_areas['Ancient Cistern'],
-        _.keys(dump.checks),
-        macros,
-        locations,
-        macros,
-        locations,
-    );
+    // const macros: Map<string, MacroValue> = new Map();
+    // const locations: Map<string, LocValue> = new Map();
+    collectLocations(dump.areas, _.keys(dump.checks));
 
-    console.log(macros);
-    console.log(locations);
+    console.log(topMacros);
+    console.log(topLocations);
 };
 
 loadLogicDump();
