@@ -113,7 +113,12 @@ const collectLocations = (area: Area, checks: string[]) => {
             fullReqs = reqs;
         }
         if (exit.includes('\\')) {
-            updateMacro(splitFirstPathSegment(exit)[1], fullReqs);
+            updateMacro(
+                `${splitFirstPathSegment(area.name)}\\Exit to ${
+                    rsplit(exit, '\\', 1)[1]
+                }`,
+                fullReqs,
+            );
         } else {
             updateMacro(
                 `${splitFirstPathSegment(area.name)[1]}\\${exit}`,
@@ -157,6 +162,10 @@ const loadLogicDump = async () => {
                     destArea = destArea.sub_areas[part];
                 });
                 destArea.entrances.push(`Entrance from ${area.name}`);
+                updateMacro(
+                    `${area.name}\\Entrance from ${area.name}`,
+                    `${area.name}\\Exit to ${rsplit(exit, '\\', 1)[1]}`,
+                );
             }
         });
         _.forEach(area.sub_areas, (subarea) => {
@@ -174,8 +183,10 @@ const loadLogicDump = async () => {
     //     ),
     // );
     collectLocations(dump.areas, _.keys(dump.checks));
-    console.log(topMacros);
-    console.log(topLocations);
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    console.log(topMacros.get('Ancient Cistern').get('Main').get('Main Room'));
+    // console.log(topLocations);
 
     // const startEntrance = findConnectingEntrance('\\Start')?.slice(1);
 
