@@ -28,8 +28,8 @@ const loadFile = async (file: string) => {
 type Area = {
     abstract: boolean;
     name: string;
-    entrances: Record<string, unknown>;
-    exits: Record<string, unknown>;
+    entrances: string[];
+    exits: Record<string, string>;
     hint_region: string;
     locations: Record<string, string>;
     sub_areas: Record<string, Area>;
@@ -57,27 +57,70 @@ type DumpFile = {
 const collectLocations = (area: Area, checks: string[]) => {
     if (area.abstract) {
         _.forEach(area.locations, (reqs, macro) => {
+            let fullReqs;
+            if (_.size(area.entrances) > 0) {
+                const arr = area.entrances.map(
+                    (entrance) => `${area.name}\\${entrance}`,
+                );
+                fullReqs = `((${arr.join(' | ')}) & ${reqs})`;
+            } else {
+                fullReqs = reqs;
+            }
             if (macro.includes('\\')) {
-                updateMacro(splitFirstPathSegment(macro)[1], reqs);
+                updateMacro(splitFirstPathSegment(macro)[1], fullReqs);
             } else {
                 updateMacro(
                     `${splitFirstPathSegment(area.name)[1]}\\${macro}`,
-                    reqs,
+                    fullReqs,
                 );
             }
         });
     } else {
         _.forEach(area.locations, (reqs, location) => {
+            let fullReqs;
+            if (_.size(area.entrances) > 0) {
+                const arr = area.entrances.map(
+                    (entrance) => `${area.name}\\${entrance}`,
+                );
+                fullReqs = `((${arr.join(' | ')}) & ${reqs})`;
+            } else {
+                fullReqs = reqs;
+            }
             if (location.includes('\\')) {
-                updateMacro(splitFirstPathSegment(location)[1], reqs);
+                updateMacro(splitFirstPathSegment(location)[1], fullReqs);
+            } else if (!checks.includes(location)) {
+                if (location.includes('\\')) {
+                    updateMacro(splitFirstPathSegment(location)[1], fullReqs);
+                } else {
+                    updateMacro(`${area.name}\\${location}`, fullReqs);
+                }
             } else {
                 updateLocation(
                     `${splitFirstPathSegment(area.name)[1]}\\${location}`,
-                    reqs,
+                    fullReqs,
                 );
             }
         });
     }
+    _.forEach(area.exits, (reqs, exit) => {
+        let fullReqs;
+        if (_.size(area.entrances) > 0) {
+            const arr = area.entrances.map(
+                (entrance) => `${area.name}\\${entrance}`,
+            );
+            fullReqs = `((${arr.join(' | ')}) & ${reqs})`;
+        } else {
+            fullReqs = reqs;
+        }
+        if (exit.includes('\\')) {
+            updateMacro(splitFirstPathSegment(exit)[1], fullReqs);
+        } else {
+            updateMacro(
+                `${splitFirstPathSegment(area.name)[1]}\\${exit}`,
+                fullReqs,
+            );
+        }
+    });
     _.forEach(area.sub_areas, (subarea) => {
         collectLocations(subarea, checks);
     });
@@ -96,96 +139,126 @@ const findArea = (path: string, area: Area): Area => {
 
 const loadLogicDump = async () => {
     const dump = (await loadFile('dump')) as DumpFile;
-    copyDumpData(dump);
+    // copyDumpData(dump);
     // console.log(dump.areas);
     // console.log(dump.areas.sub_areas['Ancient Cistern']);
     // console.log(_.keys(dump.checks));
     // const macros: Map<string, MacroValue> = new Map();
     // const locations: Map<string, LocValue> = new Map();
-    // collectLocations(dump.areas, _.keys(dump.checks));
 
-    const startEntrance = findConnectingEntrance('\\Start')?.slice(1);
-
-    if (!startEntrance) return;
-    const [startAreaName] = rsplit(startEntrance, '\\', 1);
-    const startArea = findArea(startAreaName, dump.areas);
-
-    const exploreArea = (area: Area, explored: string[]) => {
-        if (!area) {
-            console.log('ERROR UNDEFINED AREA');
-            return;
-        }
-        console.log(`In ${area.name}`);
-        if (explored.includes(area.name)) {
-            console.log('already explored');
-            return;
-        }
-        console.log(area.locations);
-        explored.push(area.name);
+    const addLogicalEntrances = (area: Area) => {
         _.forEach(area.exits, (reqs, exit) => {
-            console.log(exit);
-            let destAreaName;
             if (exit.includes('\\')) {
-                const destEntrance = findConnectingEntrance(exit);
-                if (destEntrance) {
-                    [destAreaName] = rsplit(destEntrance, '\\', 1);
-                } else {
-                    destAreaName = exit;
-                }
-            } else {
-                const destExit = `${area.name}\\${exit}`;
-                const destEntrance = findConnectingEntrance(destExit);
-                if (!destEntrance) {
-                    console.log('ERROR NO DESTINATION FOUND');
-                    return;
-                }
-                [destAreaName] = rsplit(destEntrance, '\\', 1);
+                if (_.findKey(dump.exits, (x, key) => key === exit)) return;
+                const parts = exit.split('\\');
+                parts.shift(); // clear the first empty string
+                let destArea = dump.areas;
+                parts.forEach((part) => {
+                    destArea = destArea.sub_areas[part];
+                });
+                destArea.entrances.push(`Entrance from ${area.name}`);
             }
-            // if (exit.endsWith('Exit')) {
-            //     let path;
-            //     if (exit.includes('\\')) {
-            //         path = exit;
-            //     } else {
-            //         path = `${area.name}\\${exit}`;
-            //     }
-            //     const destEntrance = findConnectingEntrance(path);
-            //     if (!destEntrance) return;
-            //     [destAreaName] = rsplit(destEntrance, '\\', 1);
-            // } else if (exit.endsWith('Entrance')) {
-            //     let path;
-            //     if (exit.includes('\\')) {
-            //         path = exit;
-            //     } else {
-            //         path = `${area.name}\\${exit}`;
-            //     }
-            //     const destEntrance = findConnectingEntrance(path);
-            //     if (!destEntrance) return;
-            //     [destAreaName] = rsplit(destEntrance, '\\', 1);
-            // } else if (exit.startsWith('Exit to')) {
-            //     let path;
-            //     if (exit.includes('\\')) {
-            //         path = exit;
-            //     } else {
-            //         path = `${area.name}\\${exit}`;
-            //     }
-            //     const destEntrance = findConnectingEntrance(path);
-            //     if (!destEntrance) return;
-            //     [destAreaName] = rsplit(destEntrance, '\\', 1);
-            // } else {
-            //     console.log('exit name is area name');
-            //     destAreaName = exit;
-            // }
-            console.log(destAreaName);
-            const destArea = findArea(destAreaName.slice(1), dump.areas);
-            console.log(`Travelling to ${destArea.name} via ${exit}`);
-            exploreArea(destArea, explored);
         });
-        console.log(
-            `Done exploring ${area.name} (sanity check - ${explored.pop()})`,
-        );
+        _.forEach(area.sub_areas, (subarea) => {
+            addLogicalEntrances(subarea);
+        });
     };
 
-    exploreArea(startArea, []);
+    addLogicalEntrances(dump.areas);
+
+    // console.log(
+    //     _.size(
+    //         dump.areas.sub_areas['Ancient Cistern'].sub_areas.Main.sub_areas[
+    //             'Main Room'
+    //         ].entrances,
+    //     ),
+    // );
+    collectLocations(dump.areas, _.keys(dump.checks));
+    console.log(topMacros);
+    console.log(topLocations);
+
+    // const startEntrance = findConnectingEntrance('\\Start')?.slice(1);
+
+    // if (!startEntrance) return;
+    // const [startAreaName] = rsplit(startEntrance, '\\', 1);
+    // const startArea = findArea(startAreaName, dump.areas);
+
+    // const exploreArea = (area: Area, explored: string[]) => {
+    //     if (!area) {
+    //         console.log('ERROR UNDEFINED AREA');
+    //         return;
+    //     }
+    //     console.log(`In ${area.name}`);
+    //     if (explored.includes(area.name)) {
+    //         console.log('already explored');
+    //         return;
+    //     }
+    //     console.log(area.locations);
+    //     explored.push(area.name);
+    //     _.forEach(area.exits, (reqs, exit) => {
+    //         console.log(exit);
+    //         let destAreaName;
+    //         if (exit.includes('\\')) {
+    //             const destEntrance = findConnectingEntrance(exit);
+    //             if (destEntrance) {
+    //                 [destAreaName] = rsplit(destEntrance, '\\', 1);
+    //             } else {
+    //                 destAreaName = exit;
+    //             }
+    //         } else {
+    //             const destExit = `${area.name}\\${exit}`;
+    //             const destEntrance = findConnectingEntrance(destExit);
+    //             if (!destEntrance) {
+    //                 console.log('ERROR NO DESTINATION FOUND');
+    //                 return;
+    //             }
+    //             [destAreaName] = rsplit(destEntrance, '\\', 1);
+    //         }
+    // if (exit.endsWith('Exit')) {
+    //     let path;
+    //     if (exit.includes('\\')) {
+    //         path = exit;
+    //     } else {
+    //         path = `${area.name}\\${exit}`;
+    //     }
+    //     const destEntrance = findConnectingEntrance(path);
+    //     if (!destEntrance) return;
+    //     [destAreaName] = rsplit(destEntrance, '\\', 1);
+    // } else if (exit.endsWith('Entrance')) {
+    //     let path;
+    //     if (exit.includes('\\')) {
+    //         path = exit;
+    //     } else {
+    //         path = `${area.name}\\${exit}`;
+    //     }
+    //     const destEntrance = findConnectingEntrance(path);
+    //     if (!destEntrance) return;
+    //     [destAreaName] = rsplit(destEntrance, '\\', 1);
+    // } else if (exit.startsWith('Exit to')) {
+    //     let path;
+    //     if (exit.includes('\\')) {
+    //         path = exit;
+    //     } else {
+    //         path = `${area.name}\\${exit}`;
+    //     }
+    //     const destEntrance = findConnectingEntrance(path);
+    //     if (!destEntrance) return;
+    //     [destAreaName] = rsplit(destEntrance, '\\', 1);
+    // } else {
+    //     console.log('exit name is area name');
+    //     destAreaName = exit;
+    // }
+    //         console.log(destAreaName);
+    //         const destArea = findArea(destAreaName.slice(1), dump.areas);
+    //         console.log(`Travelling to ${destArea.name} via ${exit}`);
+    //         exploreArea(destArea, explored);
+    //     });
+    //     console.log(
+    //         `Done exploring ${area.name} (sanity check - ${explored.pop()})`,
+    //     );
+    // };
+
+    // exploreArea(startArea, []);
 };
 
 loadLogicDump();

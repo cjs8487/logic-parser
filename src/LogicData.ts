@@ -51,7 +51,7 @@ const updateValueRecursive = (
             const curr = values.get(path);
             values.set(path, `${curr} | ${value}`);
         } else {
-            throw new Error('Cannot have a macro at the same path as a region');
+            throw new Error('Cannot have a value at the same path as a region');
         }
     } else {
         const parts = splitFirstPathSegment(path);
@@ -62,7 +62,7 @@ const updateValueRecursive = (
         if (!currValue) {
             values.set(segment, new Map());
         } else if (typeof currValue === 'string') {
-            throw new Error('Cannot have a region at the same path as a macro');
+            throw new Error('Cannot have a region at the same path as a value');
         }
         const childMap = values.get(segment);
         if (!childMap || typeof childMap === 'string') {
@@ -73,17 +73,17 @@ const updateValueRecursive = (
 };
 
 export const updateMacro = (path: string, requirements: string) => {
+    console.log(`updating macro at ${path} with ${requirements}`);
     updateValueRecursive(path, requirements, topMacros);
 };
 
 export const updateLocation = (path: string, requirements: string) => {
+    console.log(`updating location at ${path} with ${requirements}`);
     updateValueRecursive(path, requirements, topLocations);
 };
 
 export const findConnectingEntrance = (exitPath: string) => {
     const exit = exits[exitPath];
-    console.log(exitPath);
-    console.log(exit);
     if (!exit) return undefined;
     const entranceShort = exit.vanilla;
     return _.findKey(
