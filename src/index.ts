@@ -5,12 +5,17 @@ import fetch from 'node-fetch';
 import {
     copyDumpData,
     findConnectingEntrance,
+    getMacro,
     topLocations,
     topMacros,
     updateLocation,
     updateMacro,
 } from './LogicData.js';
 import { rsplit, splitFirstPathSegment } from './Util.js';
+import {
+    booleanExpressionForRequirements,
+    requirementImplies,
+} from './LogicHelper.js';
 
 const loadFileFromUrl = async (url: string) => {
     const response = await fetch(url);
@@ -69,11 +74,10 @@ const collectLocations = (area: Area, checks: string[]) => {
             }
             if (macro.includes('\\')) {
                 updateMacro(splitFirstPathSegment(macro)[1], fullReqs);
+            } else if (area.name) {
+                updateMacro(`${area.name}\\${macro}`, fullReqs);
             } else {
-                updateMacro(
-                    `${splitFirstPathSegment(area.name)[1]}\\${macro}`,
-                    fullReqs,
-                );
+                updateMacro(macro, fullReqs);
             }
         });
     } else {
@@ -94,7 +98,7 @@ const collectLocations = (area: Area, checks: string[]) => {
                     updateMacro(splitFirstPathSegment(location)[1], fullReqs);
                 } else {
                     updateMacro(
-                        `${splitFirstPathSegment(area.name)}\\${location}`,
+                        `${splitFirstPathSegment(area.name)[1]}\\${location}`,
                         fullReqs,
                     );
                 }
@@ -190,22 +194,77 @@ const loadLogicDump = async () => {
     //         ].entrances,
     //     ),
     // );
-    collectLocations(
-        dump.areas.sub_areas['Ancient Cistern'],
-        _.keys(dump.checks),
-    );
-    console.log(
-        // @ts-ignore
-        topMacros
-            // @ts-ignore
-            .get('Ancient Cistern')
-            // @ts-ignore
-            .get('Main')
-            // @ts-ignore
-            .get('Main Room'),
-        // @ts-ignore
-    );
+    collectLocations(dump.areas, _.keys(dump.checks));
+    // console.log(
+    //     // @ts-ignore
+    //     topMacros
+    //         // @ts-ignore
+    //         .get('Ancient Cistern')
+    //         // @ts-ignore
+    //         .get('Main')
+    //         // @ts-ignore
+    //         .get('Main Room')
+    //         .get('Main Exit'),
+    //     // @ts-ignore
+    // );
     // console.log(topLocations);
+
+    // console.log(topMacros);
+
+    const macro = getMacro('Ancient Cistern\\Main\\Main Room\\Main Exit');
+    console.log(macro);
+
+    if (!macro || typeof macro !== 'string') return;
+
+    // eslint-disable-next-line @typescript-eslint/no-shadow
+    const resolveMacro = (macro: string, visited: string[]): string => {
+        const parts = _.compact(_.map(macro.split(/\s*([(&|)])\s*/g), _.trim));
+        const finalTokens: string[] = [];
+        if (parts.length === 1) {
+            if (macro.startsWith('\\')) {
+                if (visited.includes(macro)) return 'Impossible';
+                visited.push(macro);
+                if (_.keys(dump.entrances).includes(macro)) return macro;
+                const child = getMacro(splitFirstPathSegment(macro)[1]);
+                if (!child || typeof child !== 'string')
+                    throw new Error('Unknown macro');
+                const resolved = resolveMacro(child, visited);
+                visited.pop();
+                return resolved;
+            }
+            return macro;
+        }
+        while (parts.length > 0) {
+            const current = parts.shift();
+            // console.log(current);
+            if (
+                current === '(' ||
+                current === '&' ||
+                current === '|' ||
+                current === ')'
+            ) {
+                finalTokens.push(current);
+            } else if (current) {
+                if (current.startsWith('\\')) {
+                    visited.push(macro);
+                    finalTokens.push(resolveMacro(current, visited));
+                    visited.pop();
+                } else {
+                    finalTokens.push(current);
+                }
+            }
+        }
+        return finalTokens.join('');
+    };
+
+    console.log(getMacro('Skyloft\\Central Skyloft\\Bazaar\\West Entrance'));
+    const expression = booleanExpressionForRequirements(macro);
+    console.log(expression);
+    const simplified = expression.simplify(requirementImplies);
+    console.log(simplified);
+
+    // const resolved = resolveMacro(macro, []);
+    // console.log(resolved);
 
     // const startEntrance = findConnectingEntrance('\\Start')?.slice(1);
 

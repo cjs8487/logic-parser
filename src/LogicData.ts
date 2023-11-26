@@ -30,18 +30,17 @@ type DumpFile = {
     checks: Record<string, string>;
 };
 
-type MacroValue = string | Map<string, MacroValue>;
-type LocValue = string | Map<string, LocValue>;
+type RecMapValue = string | Map<string, RecMapValue>;
 
-export const topMacros = new Map<string, MacroValue>();
-export const topLocations = new Map<string, LocValue>();
+export const topMacros = new Map<string, RecMapValue>();
+export const topLocations = new Map<string, RecMapValue>();
 let entrances: Record<string, Entrance> = {};
 let exits: Record<string, Exit> = {};
 
 const updateValueRecursive = (
     path: string,
     value: string,
-    values: Map<string, MacroValue>,
+    values: Map<string, RecMapValue>,
 ) => {
     if (!path.includes('\\')) {
         const currValue = values.get(path);
@@ -80,6 +79,29 @@ export const updateMacro = (path: string, requirements: string) => {
 export const updateLocation = (path: string, requirements: string) => {
     // console.log(`updating location at ${path} with ${requirements}`);
     updateValueRecursive(path, requirements, topLocations);
+};
+
+const getValueRecursive = (
+    path: string,
+    values: Map<string, RecMapValue>,
+): RecMapValue | undefined => {
+    if (!path.includes('\\')) {
+        return values.get(path);
+    }
+    const [segment, remaining] = splitFirstPathSegment(path);
+
+    const value = values.get(segment);
+    if (!value || typeof value === 'string') {
+        throw new Error('Invalid path to retrieve from');
+    }
+    return getValueRecursive(remaining, value);
+};
+
+export const getMacro = (path: string) => {
+    if (path.startsWith('\\')) {
+        return getValueRecursive(splitFirstPathSegment(path)[1], topMacros);
+    }
+    return getValueRecursive(path, topMacros);
 };
 
 export const findConnectingEntrance = (exitPath: string) => {
