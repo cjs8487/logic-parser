@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import _ from 'lodash';
 import { load } from 'js-yaml';
 import fetch from 'node-fetch';
@@ -88,11 +89,14 @@ const collectLocations = (area: Area, checks: string[]) => {
             }
             if (location.includes('\\')) {
                 updateMacro(splitFirstPathSegment(location)[1], fullReqs);
-            } else if (!checks.includes(location)) {
+            } else if (!checks.includes(`${area.name}\\${location}`)) {
                 if (location.includes('\\')) {
                     updateMacro(splitFirstPathSegment(location)[1], fullReqs);
                 } else {
-                    updateMacro(`${area.name}\\${location}`, fullReqs);
+                    updateMacro(
+                        `${splitFirstPathSegment(area.name)}\\${location}`,
+                        fullReqs,
+                    );
                 }
             } else {
                 updateLocation(
@@ -114,7 +118,7 @@ const collectLocations = (area: Area, checks: string[]) => {
         }
         if (exit.includes('\\')) {
             updateMacro(
-                `${splitFirstPathSegment(area.name)}\\Exit to ${
+                `${splitFirstPathSegment(area.name)[1]}\\Exit to ${
                     rsplit(exit, '\\', 1)[1]
                 }`,
                 fullReqs,
@@ -161,9 +165,13 @@ const loadLogicDump = async () => {
                 parts.forEach((part) => {
                     destArea = destArea.sub_areas[part];
                 });
-                destArea.entrances.push(`Entrance from ${area.name}`);
+                destArea.entrances.push(
+                    `Entrance from ${rsplit(area.name, '\\', 1)[1]}`,
+                );
                 updateMacro(
-                    `${area.name}\\Entrance from ${area.name}`,
+                    `${
+                        splitFirstPathSegment(destArea.name)[1]
+                    }\\Entrance from ${rsplit(area.name, '\\', 1)[1]}`,
                     `${area.name}\\Exit to ${rsplit(exit, '\\', 1)[1]}`,
                 );
             }
@@ -182,10 +190,21 @@ const loadLogicDump = async () => {
     //         ].entrances,
     //     ),
     // );
-    collectLocations(dump.areas, _.keys(dump.checks));
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    console.log(topMacros.get('Ancient Cistern').get('Main').get('Main Room'));
+    collectLocations(
+        dump.areas.sub_areas['Ancient Cistern'],
+        _.keys(dump.checks),
+    );
+    console.log(
+        // @ts-ignore
+        topMacros
+            // @ts-ignore
+            .get('Ancient Cistern')
+            // @ts-ignore
+            .get('Main')
+            // @ts-ignore
+            .get('Main Room'),
+        // @ts-ignore
+    );
     // console.log(topLocations);
 
     // const startEntrance = findConnectingEntrance('\\Start')?.slice(1);

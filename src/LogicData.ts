@@ -73,12 +73,12 @@ const updateValueRecursive = (
 };
 
 export const updateMacro = (path: string, requirements: string) => {
-    console.log(`updating macro at ${path} with ${requirements}`);
+    // console.log(`updating macro at ${path} with ${requirements}`);
     updateValueRecursive(path, requirements, topMacros);
 };
 
 export const updateLocation = (path: string, requirements: string) => {
-    console.log(`updating location at ${path} with ${requirements}`);
+    // console.log(`updating location at ${path} with ${requirements}`);
     updateValueRecursive(path, requirements, topLocations);
 };
 
